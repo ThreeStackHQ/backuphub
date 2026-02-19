@@ -4,6 +4,7 @@ import { getAuthUserId, unauthorized } from '@/lib/auth-helpers';
 import { getDatabase } from '@backuphub/db';
 import { backup_jobs, databases, workspaces, eq } from '@backuphub/db';
 import { getPresignedDownloadUrl } from '@/lib/storage';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const paramsSchema = z.object({
   expires_in: z.coerce.number().int().min(60).max(86400).default(3600),
@@ -13,6 +14,15 @@ const paramsSchema = z.object({
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const userId = await getAuthUserId();
   if (!userId) return unauthorized();
+
+  // Rate limiting: 10 downloads per hour per user
+  const allowed = await checkRateLimit(userId, 10, 3600);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded. Maximum 10 downloads per hour allowed.' },
+      { status: 429 }
+    );
+  }
 
   const url = new URL(req.url);
   const parsed = paramsSchema.safeParse({
@@ -40,7 +50,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ error: 'Backup not found' }, { status: 404 });
   }
 
-  if (backup.status !== 'success') {
+  if (backup.status !== 'completed') {
     return NextResponse.json({ error: 'Backup is not yet complete or failed' }, { status: 422 });
   }
 
