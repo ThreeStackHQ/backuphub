@@ -1,18 +1,16 @@
 'use client';
 
-import type { Metadata } from 'next';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Database } from 'lucide-react';
 
-export default function LoginPage(): React.JSX.Element {
+export default function SignupPage(): React.JSX.Element {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') ?? '/dashboard';
 
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +22,21 @@ export default function LoginPage(): React.JSX.Element {
     setLoading(true);
 
     try {
+      // Create account
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json() as { error?: string };
+
+      if (!res.ok) {
+        setError(data.error ?? 'Failed to create account');
+        return;
+      }
+
+      // Auto sign-in after signup
       const result = await signIn('credentials', {
         email,
         password,
@@ -31,9 +44,10 @@ export default function LoginPage(): React.JSX.Element {
       });
 
       if (result?.error) {
-        setError('Invalid email or password. Please try again.');
+        setError('Account created but sign-in failed. Please sign in manually.');
+        router.push('/login');
       } else {
-        router.push(callbackUrl);
+        router.push('/dashboard');
         router.refresh();
       }
     } catch {
@@ -53,7 +67,7 @@ export default function LoginPage(): React.JSX.Element {
             <span className="text-2xl font-bold tracking-tight text-foreground">BackupHub</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            Sign in to your workspace
+            Create your account — free forever
           </p>
         </div>
 
@@ -66,6 +80,22 @@ export default function LoginPage(): React.JSX.Element {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <label htmlFor="name" className="text-sm font-medium text-foreground">
+              Full name
+            </label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Jane Doe"
+              required
+              autoComplete="name"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+            />
+          </div>
+
           <div className="space-y-1">
             <label htmlFor="email" className="text-sm font-medium text-foreground">
               Email
@@ -91,9 +121,10 @@ export default function LoginPage(): React.JSX.Element {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Min. 8 characters"
               required
-              autoComplete="current-password"
+              minLength={8}
+              autoComplete="new-password"
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
             />
           </div>
@@ -103,15 +134,15 @@ export default function LoginPage(): React.JSX.Element {
             disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? 'Creating account...' : 'Create account'}
           </Button>
         </form>
 
         {/* Footer */}
         <p className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{' '}
-          <Link href="/signup" className="font-medium text-blue-500 hover:text-blue-400 underline underline-offset-4">
-            Create one
+          Already have an account?{' '}
+          <Link href="/login" className="font-medium text-blue-500 hover:text-blue-400 underline underline-offset-4">
+            Sign in
           </Link>
         </p>
       </div>
