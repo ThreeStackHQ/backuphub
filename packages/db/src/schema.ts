@@ -8,6 +8,7 @@ import {
   boolean,
   pgEnum,
   index,
+  jsonb,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -113,6 +114,7 @@ export const backup_jobs = pgTable(
     error_message: text('error_message'),
     // Schema snapshot (for diff)
     schema_hash: text('schema_hash'), // SHA-256 of schema DDL
+    schema_snapshot: jsonb('schema_snapshot'), // Full schema JSON for diff
     // Metadata
     created_at: timestamp('created_at').defaultNow().notNull(),
   },
