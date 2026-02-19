@@ -1,12 +1,20 @@
 import { auth } from '@/auth';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextMiddleware } from 'next/server';
+import type { NextAuthRequest } from 'next-auth';
 
-export default auth((req) => {
-  const { nextUrl, auth: session } = req;
-  const isLoggedIn = !!session;
+function middlewareCallback(req: NextAuthRequest): ReturnType<NextMiddleware> {
+  const { nextUrl } = req;
+  const isLoggedIn = !!req.auth;
 
-  const isAuthRoute = nextUrl.pathname.startsWith('/login') || nextUrl.pathname.startsWith('/signup');
-  const isDashboardRoute = nextUrl.pathname.startsWith('/dashboard') || nextUrl.pathname.startsWith('/databases') || nextUrl.pathname.startsWith('/backups') || nextUrl.pathname.startsWith('/schema-diff') || nextUrl.pathname.startsWith('/settings');
+  const isAuthRoute =
+    nextUrl.pathname.startsWith('/login') ||
+    nextUrl.pathname.startsWith('/signup');
+  const isDashboardRoute =
+    nextUrl.pathname.startsWith('/dashboard') ||
+    nextUrl.pathname.startsWith('/databases') ||
+    nextUrl.pathname.startsWith('/backups') ||
+    nextUrl.pathname.startsWith('/schema-diff') ||
+    nextUrl.pathname.startsWith('/settings');
 
   // Redirect logged-in users away from auth pages
   if (isLoggedIn && isAuthRoute) {
@@ -21,7 +29,10 @@ export default auth((req) => {
   }
 
   return NextResponse.next();
-});
+}
+
+// auth() returns a NextMiddleware when called with a NextAuthMiddleware callback
+export default auth(middlewareCallback) as unknown as NextMiddleware;
 
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
