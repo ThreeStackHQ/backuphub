@@ -75,7 +75,7 @@ export async function inspectSchema(connectionString: string): Promise<DatabaseS
     max: 1,
     connect_timeout: 10,
     idle_timeout: 5,
-    connection: { statement_timeout: '10000' }, // 10s query timeout
+    connection: { statement_timeout: 10000 }, // 10s query timeout
   });
 
   try {
