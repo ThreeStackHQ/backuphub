@@ -1,0 +1,78 @@
+import { PageNavigation } from "@/components/PageNavigation";
+
+export const metadata = {
+  title: "Getting Started",
+};
+
+# Getting Started
+
+Welcome to BackupHub — the automated database backup platform by ThreeStack. This guide walks you through creating your account, adding your first database, and running your first backup.
+
+## Create Your Account
+
+1. Visit [backuphub.threestack.io](https://backuphub.threestack.io) and click **Sign Up**
+2. Enter your email address and choose a secure password
+3. You'll be redirected to the dashboard after signup
+
+> BackupHub uses JWT-based authentication with 30-day session expiry. Your credentials are hashed with bcrypt and never stored in plain text.
+
+## Dashboard Overview
+
+After signing in, you'll land on the **Dashboard** — your central hub for managing backups.
+
+The dashboard provides:
+
+- **Database count** — Total connected databases
+- **Backup count** — Total backups stored
+- **Latest backup** — Timestamp of your most recent backup
+- **Storage used** — Total backup storage consumed
+
+### Navigation
+
+Use the sidebar to navigate between sections:
+
+| Section | Purpose |
+|---------|---------|
+| **Dashboard** | Overview and quick stats |
+| **Databases** | Manage database connections |
+| **Backups** | View backup history and restore |
+| **Schema Diff** | Compare database schemas |
+| **Settings** | Account and workspace settings |
+
+## Add Your First Database
+
+1. Navigate to **Databases** in the sidebar
+2. Click **Add Database**
+3. Fill in the connection details:
+   - **Name** — A friendly label (e.g., "Production PostgreSQL")
+   - **Type** — PostgreSQL or MySQL
+   - **Host** — Your database hostname
+   - **Port** — Default: `5432` (PostgreSQL) or `3306` (MySQL)
+   - **Database** — The database name
+   - **Username** and **Password** — Credentials with read access
+4. Click **Test Connection** to verify connectivity
+5. Click **Save** to add the database
+
+> All database credentials are encrypted with AES-256-GCM before storage. See [Connection Setup](/docs/connection-setup) for detailed configuration.
+
+## Run Your First Backup
+
+Once a database is connected:
+
+1. Go to **Backups**
+2. Click **Create Backup**
+3. Select the database you want to back up
+4. Click **Start Backup**
+
+The backup runs in the background using `pg_dump` or `mysqldump`. You'll see the backup appear in your timeline once complete.
+
+Backups are compressed with gzip and stored in Cloudflare R2 object storage.
+
+## Next Steps
+
+- [Connection Setup](/docs/connection-setup) — Configure databases securely
+- [Backup Scheduling](/docs/backup-scheduling) — Automate recurring backups
+- [Restore Guide](/docs/restore-guide) — Download and restore backups
+- [API Reference](/docs/api-reference) — Integrate with the BackupHub API
+
+<PageNavigation />

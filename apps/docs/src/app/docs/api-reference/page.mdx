@@ -1,0 +1,292 @@
+import { PageNavigation } from "@/components/PageNavigation";
+
+export const metadata = {
+  title: "API Reference",
+};
+
+# API Reference
+
+BackupHub provides a REST API for managing databases, backups, and schedules programmatically. All endpoints require authentication and return JSON responses.
+
+## Authentication
+
+All API requests require a valid session cookie obtained through the authentication endpoint.
+
+### Sign In
+
+```bash
+POST /api/auth/signin/credentials
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "your-password"
+}
+```
+
+**Response:** Sets a session cookie for subsequent requests.
+
+### Sign Up
+
+```bash
+POST /api/auth/signup
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "your-password"
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "User created successfully"
+}
+```
+
+## Databases
+
+### List Databases
+
+```bash
+GET /api/databases
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "clx1abc23def456",
+    "name": "Production PostgreSQL",
+    "type": "postgresql",
+    "host": "db.example.com",
+    "port": 5432,
+    "database": "myapp_production",
+    "username": "backup_user",
+    "createdAt": "2024-01-10T12:00:00.000Z",
+    "updatedAt": "2024-01-10T12:00:00.000Z"
+  }
+]
+```
+
+### Add Database
+
+```bash
+POST /api/databases
+Content-Type: application/json
+
+{
+  "name": "Production PostgreSQL",
+  "type": "postgresql",
+  "host": "db.example.com",
+  "port": 5432,
+  "database": "myapp_production",
+  "username": "backup_user",
+  "password": "secure-password"
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": "clx1abc23def456",
+  "name": "Production PostgreSQL",
+  "type": "postgresql",
+  "host": "db.example.com",
+  "port": 5432,
+  "database": "myapp_production",
+  "username": "backup_user",
+  "createdAt": "2024-01-10T12:00:00.000Z"
+}
+```
+
+> Passwords are encrypted with AES-256-GCM before storage and are never returned in API responses.
+
+### Test Connection
+
+```bash
+POST /api/databases/:id/test
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Connection successful",
+  "latency": 45
+}
+```
+
+**Error Response:**
+
+```json
+{
+  "success": false,
+  "message": "Connection timeout: Could not reach host db.example.com:5432"
+}
+```
+
+## Backups
+
+### List Backups
+
+```bash
+GET /api/backups
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `databaseId` | `string` | Filter backups by database ID |
+
+**Response:**
+
+```json
+[
+  {
+    "id": "bkp_abc123",
+    "databaseId": "clx1abc23def456",
+    "databaseName": "Production PostgreSQL",
+    "status": "completed",
+    "size": 15728640,
+    "duration": 12500,
+    "createdAt": "2024-01-15T02:00:00.000Z",
+    "completedAt": "2024-01-15T02:00:12.500Z"
+  }
+]
+```
+
+### Create Backup
+
+```bash
+POST /api/backups
+Content-Type: application/json
+
+{
+  "databaseId": "clx1abc23def456"
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": "bkp_xyz789",
+  "databaseId": "clx1abc23def456",
+  "status": "pending",
+  "createdAt": "2024-01-15T14:30:00.000Z"
+}
+```
+
+The backup runs asynchronously. Poll the backup status or check the dashboard for completion.
+
+### Download Backup
+
+```bash
+GET /api/backups/:id/download
+```
+
+**Response:**
+
+```json
+{
+  "url": "https://r2.backuphub.threestack.io/backups/bkp_abc123.sql.gz?X-Amz-...",
+  "expiresIn": 3600
+}
+```
+
+The `url` is a presigned R2 URL valid for 1 hour.
+
+### Backup Status Values
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Backup job is queued |
+| `running` | Backup is in progress |
+| `completed` | Backup finished successfully |
+| `failed` | Backup encountered an error |
+
+## Schema Diff
+
+### Compare Schemas
+
+```bash
+POST /api/schema-diff
+Content-Type: application/json
+
+{
+  "sourceId": "clx1abc23def456",
+  "targetId": "clx2xyz78ghi901"
+}
+```
+
+**Response:**
+
+```json
+{
+  "differences": [
+    {
+      "type": "table_added",
+      "table": "audit_logs",
+      "details": "Table exists in target but not in source"
+    },
+    {
+      "type": "column_modified",
+      "table": "users",
+      "column": "email",
+      "source": "VARCHAR(100)",
+      "target": "VARCHAR(255)"
+    }
+  ]
+}
+```
+
+## Error Responses
+
+All endpoints return consistent error responses:
+
+```json
+{
+  "error": "Descriptive error message"
+}
+```
+
+### HTTP Status Codes
+
+| Code | Meaning |
+|------|---------|
+| `200` | Success |
+| `201` | Resource created |
+| `400` | Bad request — invalid input |
+| `401` | Unauthorized — not authenticated |
+| `403` | Forbidden — insufficient permissions |
+| `404` | Resource not found |
+| `429` | Rate limited — too many requests |
+| `500` | Internal server error |
+
+### Rate Limiting
+
+API requests are rate-limited using Redis-based sliding window counters. Current limits:
+
+| Endpoint | Limit |
+|----------|-------|
+| Authentication | 5 requests / minute |
+| Database operations | 30 requests / minute |
+| Backup operations | 10 requests / minute |
+| General API | 60 requests / minute |
+
+Rate limit headers are included in responses:
+
+```
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 58
+X-RateLimit-Reset: 1705305600
+```
+
+<PageNavigation />

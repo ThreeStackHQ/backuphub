@@ -1,0 +1,165 @@
+import { PageNavigation } from "@/components/PageNavigation";
+
+export const metadata = {
+  title: "Restore Guide",
+};
+
+# Restore Guide
+
+BackupHub stores compressed database backups in Cloudflare R2 object storage. This guide covers downloading backups and restoring them to PostgreSQL or MySQL databases.
+
+## Downloading a Backup
+
+1. Navigate to **Backups** in the sidebar
+2. Find the backup you want to restore
+3. Click the **Download** button
+4. A time-limited presigned URL is generated (valid for 1 hour)
+5. The compressed `.sql.gz` file downloads to your machine
+
+> Presigned URLs expire after 1 hour for security. If the download link expires, click Download again to generate a new one.
+
+## Restoring to PostgreSQL
+
+### From a Compressed Backup
+
+```bash
+# Decompress and restore in one step
+gunzip -c backup_2024-01-15_020000.sql.gz | psql -h localhost -U myuser -d mydb
+
+# Or decompress first, then restore
+gunzip backup_2024-01-15_020000.sql.gz
+psql -h localhost -U myuser -d mydb -f backup_2024-01-15_020000.sql
+```
+
+### To a Fresh Database
+
+```bash
+# Create a new database
+createdb -h localhost -U myuser mydb_restored
+
+# Restore the backup
+gunzip -c backup_2024-01-15_020000.sql.gz | psql -h localhost -U myuser -d mydb_restored
+```
+
+### Using pg_restore (Custom Format)
+
+If the backup was created in custom format:
+
+```bash
+pg_restore -h localhost -U myuser -d mydb -v backup_2024-01-15_020000.dump
+```
+
+### Common pg_restore Options
+
+```bash
+# Restore only specific tables
+pg_restore -h localhost -U myuser -d mydb -t users -t orders backup.dump
+
+# Restore only the schema (no data)
+pg_restore -h localhost -U myuser -d mydb --schema-only backup.dump
+
+# Restore only data (no schema)
+pg_restore -h localhost -U myuser -d mydb --data-only backup.dump
+
+# Clean (drop) existing objects before restore
+pg_restore -h localhost -U myuser -d mydb --clean backup.dump
+```
+
+## Restoring to MySQL
+
+### From a Compressed Backup
+
+```bash
+# Decompress and restore in one step
+gunzip -c backup_2024-01-15_020000.sql.gz | mysql -h localhost -u myuser -p mydb
+
+# Or decompress first, then restore
+gunzip backup_2024-01-15_020000.sql.gz
+mysql -h localhost -u myuser -p mydb < backup_2024-01-15_020000.sql
+```
+
+### To a Fresh Database
+
+```bash
+# Create a new database
+mysql -h localhost -u myuser -p -e "CREATE DATABASE mydb_restored;"
+
+# Restore the backup
+gunzip -c backup_2024-01-15_020000.sql.gz | mysql -h localhost -u myuser -p mydb_restored
+```
+
+## Restore Best Practices
+
+### Before Restoring
+
+- **Verify the backup** — Check the file size and creation date match your expectations
+- **Test on a staging environment first** — Never restore directly to production without testing
+- **Check disk space** — Ensure the target server has enough space for the decompressed data
+- **Notify your team** — Restores can cause downtime; communicate with stakeholders
+
+### During Restore
+
+- **Use a transaction** — PostgreSQL restores within a transaction by default with `psql`. For MySQL, wrap in `START TRANSACTION` / `COMMIT` if needed
+- **Monitor progress** — Large restores can take time. Use `pv` for progress indication:
+
+```bash
+# With progress bar (requires pv)
+gunzip -c backup.sql.gz | pv | psql -h localhost -U myuser -d mydb
+```
+
+### After Restoring
+
+- **Verify data integrity** — Run queries to spot-check critical tables
+- **Check row counts** — Compare row counts against expected values
+- **Run ANALYZE** — Update PostgreSQL statistics after a large restore:
+
+```sql
+-- PostgreSQL: Update query planner statistics
+ANALYZE;
+```
+
+```sql
+-- MySQL: Update table statistics
+ANALYZE TABLE users, orders, products;
+```
+
+## Troubleshooting
+
+### Permission Denied
+
+Ensure the user has `CREATE`, `INSERT`, and schema modification permissions on the target database.
+
+```sql
+-- PostgreSQL
+GRANT ALL PRIVILEGES ON DATABASE mydb TO myuser;
+
+-- MySQL
+GRANT ALL PRIVILEGES ON mydb.* TO 'myuser'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+### Encoding Errors
+
+If you see character encoding warnings:
+
+```bash
+# PostgreSQL: Specify encoding
+psql -h localhost -U myuser -d mydb -c "SET client_encoding = 'UTF8';" -f backup.sql
+
+# MySQL: Specify character set
+mysql -h localhost -u myuser -p --default-character-set=utf8mb4 mydb < backup.sql
+```
+
+### Existing Objects Conflict
+
+If tables already exist in the target database:
+
+```bash
+# PostgreSQL: Drop and recreate
+psql -h localhost -U myuser -d mydb -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+gunzip -c backup.sql.gz | psql -h localhost -U myuser -d mydb
+```
+
+> **Warning:** The command above drops all existing data. Only use this when you're certain you want a complete replacement.
+
+<PageNavigation />
