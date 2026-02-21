@@ -1,0 +1,136 @@
+import { PageNavigation } from "@/components/PageNavigation";
+
+export const metadata = {
+  title: "Connection Setup",
+};
+
+# Connection Setup
+
+BackupHub connects to your PostgreSQL and MySQL databases to perform automated backups. This guide covers connection configuration, security considerations, and troubleshooting.
+
+## Connection String Format
+
+### PostgreSQL
+
+```
+postgresql://username:password@hostname:5432/database_name
+```
+
+Individual fields:
+
+| Field | Example | Description |
+|-------|---------|-------------|
+| **Host** | `db.example.com` | Database server hostname or IP |
+| **Port** | `5432` | Default PostgreSQL port |
+| **Database** | `myapp_production` | Target database name |
+| **Username** | `backup_user` | User with read permissions |
+| **Password** | `••••••••` | User password (encrypted at rest) |
+
+### MySQL
+
+```
+mysql://username:password@hostname:3306/database_name
+```
+
+| Field | Example | Description |
+|-------|---------|-------------|
+| **Host** | `db.example.com` | Database server hostname or IP |
+| **Port** | `3306` | Default MySQL port |
+| **Database** | `myapp_production` | Target database name |
+| **Username** | `backup_user` | User with read permissions |
+| **Password** | `••••••••` | User password (encrypted at rest) |
+
+## Creating a Backup User
+
+We recommend creating a dedicated database user with **read-only** permissions for BackupHub.
+
+### PostgreSQL
+
+```sql
+-- Create a dedicated backup user
+CREATE USER backuphub_reader WITH PASSWORD 'your-secure-password';
+
+-- Grant read-only access
+GRANT CONNECT ON DATABASE myapp_production TO backuphub_reader;
+GRANT USAGE ON SCHEMA public TO backuphub_reader;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO backuphub_reader;
+
+-- Ensure future tables are also accessible
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT ON TABLES TO backuphub_reader;
+```
+
+### MySQL
+
+```sql
+-- Create a dedicated backup user
+CREATE USER 'backuphub_reader'@'%' IDENTIFIED BY 'your-secure-password';
+
+-- Grant read-only access + LOCK TABLES for consistent backups
+GRANT SELECT, SHOW VIEW, LOCK TABLES, RELOAD, REPLICATION CLIENT
+  ON myapp_production.* TO 'backuphub_reader'@'%';
+
+FLUSH PRIVILEGES;
+```
+
+## Security
+
+### Credential Encryption
+
+All database passwords are encrypted using **AES-256-GCM** before being stored. The encryption key is managed server-side and never exposed to the client.
+
+### Network Access
+
+Ensure your database server allows connections from BackupHub's IP addresses. If you're using a cloud provider:
+
+**AWS RDS:**
+- Add BackupHub's IP to your security group inbound rules
+- Use the RDS endpoint as the hostname
+
+**Google Cloud SQL:**
+- Add BackupHub's IP to the authorized networks
+- Enable the public IP on your instance (or use Cloud SQL Proxy)
+
+**DigitalOcean Managed Databases:**
+- Add BackupHub's IP to the trusted sources list
+
+### SSL Connections
+
+BackupHub uses SSL/TLS connections when available. Most managed database providers enable SSL by default.
+
+## Testing Your Connection
+
+After entering your credentials in the BackupHub dashboard:
+
+1. Click **Test Connection**
+2. BackupHub will attempt to connect and run a basic query
+3. You'll see one of these results:
+
+| Status | Meaning |
+|--------|---------|
+| **Connected** | Connection successful, ready for backups |
+| **Auth Failed** | Invalid username or password |
+| **Timeout** | Cannot reach the host — check firewall rules |
+| **SSL Required** | Server requires SSL but connection is not encrypted |
+
+## Troubleshooting
+
+### Connection Timeout
+
+- Verify the hostname and port are correct
+- Check that your database's firewall allows BackupHub's IP
+- Ensure the database is publicly accessible (or VPN/tunnel is configured)
+
+### Authentication Failed
+
+- Double-check username and password
+- Verify the user has access to the specified database
+- For PostgreSQL, check `pg_hba.conf` allows the connection method
+
+### Permission Denied
+
+- Ensure the user has `SELECT` permissions on all tables
+- For MySQL, verify `LOCK TABLES` permission is granted
+- Run the user creation SQL commands above to set correct permissions
+
+<PageNavigation />

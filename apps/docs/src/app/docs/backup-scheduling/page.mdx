@@ -1,0 +1,120 @@
+import { PageNavigation } from "@/components/PageNavigation";
+
+export const metadata = {
+  title: "Backup Scheduling",
+};
+
+# Backup Scheduling
+
+BackupHub uses a job queue powered by BullMQ and Redis to run automated backups on your schedule. You can configure backup frequency, timezone, and retention policies.
+
+## Setting Up a Schedule
+
+1. Navigate to **Databases** in the sidebar
+2. Select the database you want to schedule
+3. Click **Configure Schedule**
+4. Choose your preferred frequency or enter a custom cron expression
+5. Select your timezone
+6. Click **Save Schedule**
+
+## Frequency Presets
+
+BackupHub offers common scheduling presets:
+
+| Preset | Cron Expression | Description |
+|--------|----------------|-------------|
+| **Every hour** | `0 * * * *` | Runs at the top of every hour |
+| **Every 6 hours** | `0 */6 * * *` | Runs at 00:00, 06:00, 12:00, 18:00 |
+| **Daily** | `0 2 * * *` | Runs daily at 2:00 AM |
+| **Weekly** | `0 2 * * 1` | Runs every Monday at 2:00 AM |
+| **Monthly** | `0 2 1 * *` | Runs on the 1st of each month at 2:00 AM |
+
+## Custom Cron Expressions
+
+For more control, use standard cron syntax:
+
+```
+┌───────────── minute (0-59)
+│ ┌───────────── hour (0-23)
+│ │ ┌───────────── day of month (1-31)
+│ │ │ ┌───────────── month (1-12)
+│ │ │ │ ┌───────────── day of week (0-7, 0 and 7 = Sunday)
+│ │ │ │ │
+* * * * *
+```
+
+### Examples
+
+```bash
+# Every 30 minutes
+*/30 * * * *
+
+# Twice daily at 6 AM and 6 PM
+0 6,18 * * *
+
+# Every weekday at midnight
+0 0 * * 1-5
+
+# Every 4 hours on weekends
+0 */4 * * 0,6
+
+# First and fifteenth of each month at 3 AM
+0 3 1,15 * *
+```
+
+## Timezone Handling
+
+All schedules are evaluated in your selected timezone. BackupHub uses IANA timezone identifiers.
+
+Common timezones:
+
+| Timezone | Identifier |
+|----------|------------|
+| UTC | `UTC` |
+| Amsterdam | `Europe/Amsterdam` |
+| New York | `America/New_York` |
+| London | `Europe/London` |
+| Tokyo | `Asia/Tokyo` |
+| Sydney | `Australia/Sydney` |
+
+> Daylight saving time transitions are handled automatically. A backup scheduled for 2:00 AM will always run at 2:00 AM local time, even when clocks change.
+
+## How Scheduling Works
+
+Under the hood, BackupHub processes schedules using:
+
+1. **BullMQ** — A Redis-based job queue that manages backup jobs
+2. **Worker process** — A separate service that picks up and executes backup jobs
+3. **Cron trigger** — BullMQ's built-in repeatable job support evaluates cron expressions
+
+When a scheduled job fires:
+
+1. A backup job is added to the queue
+2. The worker picks it up and runs `pg_dump` or `mysqldump`
+3. The output is compressed with gzip
+4. The compressed backup is uploaded to Cloudflare R2
+5. The backup record is saved to the database
+6. If the backup fails, a notification email is sent via Resend
+
+## Managing Schedules
+
+### Pause a Schedule
+
+To temporarily stop a schedule without deleting it, click the **Pause** toggle on the database's schedule settings. The schedule configuration is preserved and can be resumed at any time.
+
+### Update a Schedule
+
+Simply change the cron expression or timezone and click **Save**. The old schedule is replaced immediately — no overlap or duplicate runs.
+
+### Delete a Schedule
+
+Click **Remove Schedule** to stop all automated backups for that database. Existing backups are not affected.
+
+## Best Practices
+
+- **Schedule during low-traffic hours** — Backups create read load on your database. Run them during off-peak times.
+- **Match frequency to data change rate** — A database with frequent writes needs more frequent backups than a mostly-read database.
+- **Monitor backup sizes** — If backup sizes grow unexpectedly, investigate data growth.
+- **Test restores regularly** — A backup you've never tested is a backup you can't trust. See the [Restore Guide](/docs/restore-guide).
+
+<PageNavigation />
