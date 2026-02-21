@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         const workspaceId = session.metadata?.workspaceId;
-        const tier = session.metadata?.tier as 'starter' | 'pro' | undefined;
+        const tier = session.metadata?.tier as 'business' | 'pro' | undefined;
         if (!workspaceId || !tier) break;
 
         const [existing] = await db
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
           .limit(1);
 
         const vals = {
-          tier: tier as 'free' | 'starter' | 'pro',
+          tier: tier as 'free' | 'business' | 'pro',
           status: 'active' as const,
           stripe_customer_id: session.customer as string,
           stripe_subscription_id: session.subscription as string,
@@ -62,7 +62,8 @@ export async function POST(req: NextRequest) {
 
         await db.update(subscriptions)
           .set({
-            status: status as 'active' | 'inactive' | 'canceled' | 'trialing',
+            status: status as 'active' | 'inactive' | 'canceled',
+            // @ts-ignore - Stripe Subscription has current_period_end
             current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000) : undefined,
             updated_at: new Date(),
           })

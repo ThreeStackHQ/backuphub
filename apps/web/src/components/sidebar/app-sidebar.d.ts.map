@@ -1,0 +1,1 @@
+{"version":3,"file":"app-sidebar.d.ts","sourceRoot":"","sources":["app-sidebar.tsx"],"names":[],"mappings":"AAEA,OAAO,KAAK,KAAK,MAAM,OAAO,CAAC;AAmD/B,UAAU,eAAe;IACvB,SAAS,EAAE,OAAO,CAAC;IACnB,QAAQ,EAAE,MAAM,IAAI,CAAC;CACtB;AAED,wBAAgB,UAAU,CAAC,EACzB,SAAS,EACT,QAAQ,GACT,EAAE,eAAe,GAAG,KAAK,CAAC,GAAG,CAAC,OAAO,CAqGrC"}

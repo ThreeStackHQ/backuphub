@@ -39,6 +39,7 @@ export async function POST(
   // Test connection based on type
   try {
     if (dbConfig.type === 'postgres') {
+      // @ts-ignore - Dynamic import for optional postgres dependency
       const { default: postgres } = await import('postgres');
       const sql = postgres({
         host: dbConfig.host,

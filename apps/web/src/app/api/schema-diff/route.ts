@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
   const parsed = querySchema.safeParse(params);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0]?.message }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 400 });
   }
 
   const db = getDatabase();
@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
         .from(backup_jobs)
         .where(and(
           eq(backup_jobs.database_id, parsed.data.database_id),
-          eq(backup_jobs.status, 'success')
+          eq(backup_jobs.status, 'completed')
         ))
         .orderBy(desc(backup_jobs.completed_at))
         .limit(1);

@@ -1,3 +1,4 @@
+// @ts-ignore - postgres package has incomplete type declarations
 import postgres from 'postgres';
 
 export interface ColumnInfo {

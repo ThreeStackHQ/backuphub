@@ -37,4 +37,4 @@ export const PLANS = {
   },
 } as const;
 
-export type PlanTier = 'free' | 'starter' | 'pro';
+export type PlanTier = 'free' | 'business' | 'pro';
