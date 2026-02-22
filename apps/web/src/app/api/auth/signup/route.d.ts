@@ -4,8 +4,8 @@ export declare function POST(req: NextRequest): Promise<NextResponse<{
 }> | NextResponse<{
     user: {
         id: string;
-        name: string;
         email: string;
+        name: string;
     };
 }>>;
 //# sourceMappingURL=route.d.ts.map

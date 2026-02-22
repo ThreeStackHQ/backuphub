@@ -227,8 +227,8 @@ importers:
         specifier: ^5.0.0
         version: 5.69.3
       ioredis:
-        specifier: ^5.3.0
-        version: 5.9.3
+        specifier: 5.9.2
+        version: 5.9.2
       resend:
         specifier: ^3.0.0
         version: 3.5.0(react-dom@18.3.1)(react@18.3.1)

@@ -25,5 +25,5 @@ export declare const PLANS: {
         readonly priceId: string;
     };
 };
-export type PlanTier = 'free' | 'starter' | 'pro';
+export type PlanTier = 'free' | 'business' | 'pro';
 //# sourceMappingURL=stripe.d.ts.map

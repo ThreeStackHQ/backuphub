@@ -14,7 +14,7 @@
     "@backuphub/db": "workspace:*",
     "@backuphub/s3": "workspace:*",
     "bullmq": "^5.0.0",
-    "ioredis": "^5.3.0",
+    "ioredis": "5.9.2",
     "resend": "^3.0.0"
   },
   "devDependencies": {
